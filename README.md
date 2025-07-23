@@ -77,7 +77,7 @@ The Company Knowledge Assistant is a RAG chatbot that:
 
 ### Prerequisites
 
-- Node.js 18+ and pnpm
+- Node.js 18+ and npm
 - OpenAI API key
 - Supabase account
 - Notion integration token
@@ -88,7 +88,7 @@ The Company Knowledge Assistant is a RAG chatbot that:
 ```bash
 git clone https://github.com/434media/ai-assistant.git
 cd ai-assistant
-pnpm install
+npm install
 ```
 
 ### 2. Environment Setup
@@ -165,7 +165,7 @@ $$;
 ### 4. Run the Application
 
 ```bash
-pnpm dev
+npm run dev
 ```
 
 Visit `http://localhost:3000` to start chatting!
@@ -236,10 +236,10 @@ If your team completes the MVP ahead of schedule:
 │ • Future: PDFs  │    │ • Embedding      │    │ • Similarity    │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
                                                          │
-┌─────────────────┐    ┌──────────────────┐             │
-│   Chat UI       │    │   API Routes     │             │
-│                 │    │                  │             │
-│ • Real-time     │◀───│ • Vector Search  │◀────────────┘
+┌─────────────────┐    ┌──────────────────┐              │
+│   Chat UI       │    │   API Routes     │              │
+│                 │    │                  │              │
+│ • Real-time     │◀───│ • Vector Search  │◀─────────────┘
 │ • Citations     │    │ • AI Generation  │
 │ • Streaming     │    │ • Source Linking │
 └─────────────────┘    └──────────────────┘
@@ -284,18 +284,13 @@ Set all variables in your Vercel project settings:
 
 ## 🆘 Mentorship & Support
 
-As the lead developer at 434 MEDIA, I am here to guide you. Don't hesitate to ask questions, seek clarification, or request help if you get stuck. My goal is to help you learn and succeed.
+Don't hesitate to ask questions, seek clarification, or request help if you get stuck.
 
 ## 👥 Team
 
 - **Kamian** - Developer
 - **Samuel** - Developer  
 - **Guna** - Developer
-- **Jesse** - 434 MEDIA Mentor & Technical Lead
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
