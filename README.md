@@ -295,3 +295,8 @@ Don't hesitate to ask questions, seek clarification, or request help if you get 
 ---
 
 Built with ❤️ using [Vercel AI SDK](https://sdk.vercel.ai) and [Next.js](https://nextjs.org)
+
+
+
+
+ffffffff
