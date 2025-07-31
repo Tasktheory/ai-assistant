@@ -1,4 +1,3 @@
-//app/component/Chat.tsx
 'use client'
 
 import { useState } from 'react'
@@ -29,21 +28,26 @@ export default function Chat() {
 
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
-    let assistantMessage = ''
+    let partialContent = ''
+
+    const appendMessage = (content: string) => {
+      setMessages((prev) => {
+        const last = prev[prev.length - 1]
+        if (last?.role === 'assistant') {
+          return [...prev.slice(0, -1), { role: 'assistant', content }]
+        } else {
+          return [...prev, { role: 'assistant', content }]
+        }
+      })
+    }
 
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
 
-      assistantMessage += decoder.decode(value)
-      setMessages((prev) => {
-        const last = prev[prev.length - 1]
-        if (last?.role === 'assistant') {
-          return [...prev.slice(0, -1), { role: 'assistant', content: assistantMessage }]
-        } else {
-          return [...prev, { role: 'assistant', content: assistantMessage }]
-        }
-      })
+      const chunk = decoder.decode(value)
+      partialContent += chunk
+      appendMessage(partialContent)
     }
 
     setLoading(false)
@@ -68,7 +72,9 @@ export default function Chat() {
           <div
             key={i}
             className={`p-3 rounded ${
-              msg.role === 'user' ? 'bg-blue-100 text-right' : 'bg-gray-100 text-left'
+             msg.role === 'user'
+  ? 'bg-blue-100 text-right text-gray-900'
+  : 'bg-white text-left text-gray-800 shadow-sm rounded-2xl'
             }`}
           >
             {msg.role === 'assistant' ? (
@@ -85,7 +91,7 @@ export default function Chat() {
           className="flex-1 border p-2 rounded"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask a 434 question..."
+          placeholder="Ask a 434 question or generate a poster..."
         />
         <button
           type="submit"
