@@ -1,8 +1,8 @@
 // app/api/airtable.ts
 
 export interface AirtableRecord {
-  info: any;
-  name: any;
+  info: string;
+  name: string;
   id: string;
   fields: {
     name: string;
@@ -22,8 +22,8 @@ export async function fetchAirtableData(): Promise<AirtableRecord[]> {
         info: "This is some example info"
       },
       createdTime: new Date().toISOString(),
-      info: undefined,
-      name: undefined
+      info: "",
+      name: ""
     }
   ];
 }
