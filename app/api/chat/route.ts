@@ -54,8 +54,9 @@ async function answerCompanyQuestionStream(messages: ChatMessage[]) {
     match_count: 5,
   })
 
-  const topDoc = data?.[0]
-const contextText = data?.map((doc: any) => doc.content).join('\n\n') || ''
+  type SupabaseDoc = { content: string; title?: string }
+  const topDoc: SupabaseDoc | undefined = data?.[0]
+  const contextText = (data as SupabaseDoc[] | undefined)?.map((doc) => doc.content).join('\n\n') || ''
 
 
   const systemPrompt = `You are a helpful assistant answering questions using the provided context only.
