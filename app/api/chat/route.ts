@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import OpenAI from 'openai'
 import { createClient } from '@supabase/supabase-js'
-import { AirtableRecord, fetchAirtableData } from '../airtable' 
+import { AirtableRecord, fetchAirtableData } from '../../airtable' 
 import { scrapeWebsiteContent } from '../scraper' 
 export const runtime = 'edge'
 
