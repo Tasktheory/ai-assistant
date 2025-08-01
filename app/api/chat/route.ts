@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server'
+import { NextRequest , NextResponse} from 'next/server'
 import OpenAI from 'openai'
 import { createClient } from '@supabase/supabase-js'
 import { AirtableRecord, fetchAirtableData } from '../airtable' 
@@ -19,24 +19,95 @@ function toOpenAIMessage(m: ChatMessage) {
   return { role: m.role, content: m.content }
 }
 
-async function generatePoster(prompt: string) {
-  const response = await fetch('https://api.openai.com/v1/images/generations', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      prompt,
-      n: 1,
-      size: "1024x1024",
-    }),
-  })
+const brandMap: Record<string, { name: string; stylePrompt: string }> = {
+      vemosvamos: {
+        name: "Vemos Vamos",
+        stylePrompt: `
+Design a single-page poster with a clean, scrapbook-inspired look.
 
-  if (!response.ok) throw new Error('Poster generation failed')
-  const data = await response.json()
-  return data.data[0].url as string
-}
+Use one central, realistic image that reflects the event theme. Keep the layout simple and minimal, like a student flyer.
+
+Stick to a cream background (#ECEADA) with dark red (#861804) and black accents. Add subtle paper textures, cutout edges, or tape to create a handmade, analog feel.
+
+Avoid multiple layouts, ornate patterns, decorative flourishes, or mockup-style borders. The final image should feel like a real flyer, photographed or scanned.
+`,
+
+      },
+      devsa: {
+        name: "DEVSA",
+        stylePrompt: `
+Use a modern, tech-inspired photo.
+
+Design should be influenced by command-line terminals and code editor UIs. Incorporate visual elements such as:
+- monospaced fonts
+- dark backgrounds with neon green (#00FF00), electric blue (#00BFFF)
+- brackets, code snippets, or syntax-like separators
+
+Avoid serif fonts, analog textures, or retro imagery. The design should feel sleek, digital, and clearly themed around coding or developer culture.
+        `,
+      },
+      texmex: {
+        name: "TexMex Heritage",
+        stylePrompt: `
+Create a single black-and-white illustration with a gritty, high-contrast look. Inspired by vintage boxing aesthetics, but with no text.
+
+Focus on texture, motion, and visual intensity — no layout or type. Just raw, rugged visual storytelling in bold style.
+        `,
+      },
+    };
+async function generatePoster(prompt: string, type: string = "default", size: string = "1024x1024") {
+  const brand = brandMap[type] || { name: "Generic Event", stylePrompt: "" };
+
+  const dallePrompt = `
+Create a bold, full-frame illustrated image for the brand "${brand.name}".
+Theme: ${prompt}
+
+Visual direction:
+- Apply the following style: ${brand.stylePrompt}
+- Focus on strong composition, texture, and atmosphere.
+- Avoid excessive or detailed text; use minimal or no lettering.
+- Emphasize visual storytelling over layout or typography.
+
+This should look like a single, standalone poster design — not a framed mockup, not a collage, not a digital ad.
+Do not show multiple layouts, frames, rooms, or photo-mockups.
+`;
+
+ const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+     throw new Error("Missing API Key")
+    }
+
+    // === DALL·E Image Generation ===
+    const imageRes = await fetch("https://api.openai.com/v1/images/generations", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "dall-e-3",
+        prompt: dallePrompt,
+        n: 1,
+        size,
+        response_format: "url",
+      }),
+    });
+
+    const imageData = await imageRes.json();
+    if (imageData.error) {
+      console.error("OpenAI image error:", imageData.error)
+      throw new Error(imageData.error.message)
+    }
+
+    const urls = imageData.data?.map((img: { url: string }) => img.url);
+
+
+
+    return {
+    urls  };
+
+  } 
+
 
 async function answerCompanyQuestionStream(messages: ChatMessage[]) {
   const question = messages[messages.length - 1].content
@@ -180,17 +251,15 @@ export async function POST(req: NextRequest) {
   const airtableKeywords = ['airtable', 'database', 'crm']
 
   try {
-    if (posterKeywords.some(k => lastMessage.includes(k))) {
-      const url = await generatePoster(lastMessage)
-      const stream = new ReadableStream({
-        start(controller) {
-          controller.enqueue(new TextEncoder().encode(`Here is the link for the image: ${url}`))
-          controller.close()
-        }
+         if (posterKeywords.some(k => lastMessage.includes(k))) {
+      const { urls } = await generatePoster(lastMessage)
+      if (!urls || urls.length === 0) {
+        return NextResponse.json({ error: "Image generation failed" }, { status: 500 })
+      }
+      return NextResponse.json({
+        imageUrl: urls[0],
       })
-      return new Response(stream)
     }
-
     if (scrapeKeywords.some(k => lastMessage.includes(k))) {
       return await handleWebScrape(messages)
     }
@@ -201,7 +270,6 @@ export async function POST(req: NextRequest) {
 
     return await answerCompanyQuestionStream(messages)
   } catch (err) {
-    return new Response(`Error: ${err}`, { status: 500 })
-  }
+    console.error("Error in POST handler:", err)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })  }
 }
-
