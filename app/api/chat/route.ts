@@ -125,8 +125,14 @@ Do not show multiple layouts, frames, rooms, or photo-mockups.
 //     match_count: 5,
 //   })
 
+<<<<<<< HEAD
 //   const topDoc = data?.[0]
 // const contextText = data?.map((doc: any) => doc.content).join('\n\n') || ''
+=======
+  const topDoc = data?.[0]
+type SupabaseDoc = { content: string; title?: string }
+const contextText = (data as SupabaseDoc[] | undefined)?.map((doc) => doc.content).join('\n\n') || ''
+>>>>>>> 22619b2c8e82f1a3ffdd76c7c56b390f2ad900cc
 
 
 //   const systemPrompt = `You are a helpful assistant answering questions using the provided context only.

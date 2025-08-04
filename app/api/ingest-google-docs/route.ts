@@ -12,7 +12,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const key = JSON.parse(readFileSync(process.env.GOOGLE_SERVICE_ACCOUNT_KEY!, 'utf8'))
 
   const auth = new google.auth.GoogleAuth({
