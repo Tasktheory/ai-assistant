@@ -17,9 +17,30 @@ export default function Chat() {
 
     const response = await fetch('/api/chat', {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages: [...messages, userMessage] }),
     })
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+        const json = await response.json();
+    if (json.imageUrl) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: `<img src="${json.imageUrl}" alt="Generated Poster" class="max-w-full rounded-lg mt-2" />`,
+        },
+      ]);
+    } else if (json.error) {
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: `❌ Error: ${json.error}` },
+      ]);
+    }
 
+    setLoading(false);
+    return;
+  }
     if (!response.body) {
       console.error('No response body')
       setLoading(false)
@@ -77,11 +98,10 @@ export default function Chat() {
   : 'bg-white text-left text-gray-800 shadow-sm rounded-2xl'
             }`}
           >
-            {msg.role === 'assistant' ? (
-              <span dangerouslySetInnerHTML={{ __html: linkify(msg.content) }}></span>
-            ) : (
-              <span>{msg.content}</span>
-            )}
+           {msg.role === 'assistant' && msg.content.includes('<img')
+  ? <span dangerouslySetInnerHTML={{ __html: msg.content }}></span>
+  : <span dangerouslySetInnerHTML={{ __html: linkify(msg.content) }}></span>
+}
           </div>
         ))}
       </div>

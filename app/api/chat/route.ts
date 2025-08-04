@@ -6,7 +6,7 @@ import { scrapeWebsiteContent } from '../scraper'
 export const runtime = 'edge'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!)
+//const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!)
 
 type Role = 'user' | 'assistant' | 'system'
 
@@ -109,138 +109,138 @@ Do not show multiple layouts, frames, rooms, or photo-mockups.
   } 
 
 
-async function answerCompanyQuestionStream(messages: ChatMessage[]) {
-  const question = messages[messages.length - 1].content
+// async function answerCompanyQuestionStream(messages: ChatMessage[]) {
+//   const question = messages[messages.length - 1].content
 
-  const embeddingRes = await openai.embeddings.create({
-    model: 'text-embedding-ada-002',
-    input: question,
-  })
+//   const embeddingRes = await openai.embeddings.create({
+//     model: 'text-embedding-ada-002',
+//     input: question,
+//   })
 
-  const embedding = embeddingRes.data[0].embedding
+//   const embedding = embeddingRes.data[0].embedding
 
-  const { data } = await supabase.rpc('match_documents', {
-    query_embedding: embedding,
-    match_threshold: 0.75,
-    match_count: 5,
-  })
+//   const { data } = await supabase.rpc('match_documents', {
+//     query_embedding: embedding,
+//     match_threshold: 0.75,
+//     match_count: 5,
+//   })
 
-  const topDoc = data?.[0]
-const contextText = data?.map((doc: any) => doc.content).join('\n\n') || ''
-
-
-  const systemPrompt = `You are a helpful assistant answering questions using the provided context only.
-If unsure, say you don't know.
-Context:
-${contextText}`
-
-  const stream = await openai.chat.completions.create({
-    model: 'gpt-4',
-    stream: true,
-    messages: [
-      { role: 'system', content: systemPrompt },
-      ...messages.map(toOpenAIMessage),
-    ],
-  })
-
-  const encoder = new TextEncoder()
- const readableStream = new ReadableStream({
-  async start(controller) {
-    let fullContent = ''
-    for await (const chunk of stream) {
-      const content = chunk.choices?.[0]?.delta?.content
-      if (content) {
-        fullContent += content
-      }
-    }
-
-    if (topDoc?.title) {
-      fullContent += ` (Source: ${topDoc.title})`
-    }
-
-    controller.enqueue(encoder.encode(fullContent))
-    controller.close()
-  }
-})
+//   const topDoc = data?.[0]
+// const contextText = data?.map((doc: any) => doc.content).join('\n\n') || ''
 
 
-  return new Response(readableStream, {
-    headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
-      'Cache-Control': 'no-cache',
-    },
-  })
-}
+//   const systemPrompt = `You are a helpful assistant answering questions using the provided context only.
+// If unsure, say you don't know.
+// Context:
+// ${contextText}`
 
-async function handleAirtableData(messages: ChatMessage[]) {
-  const airtableData: AirtableRecord[] = await fetchAirtableData()
+//   const stream = await openai.chat.completions.create({
+//     model: 'gpt-4',
+//     stream: true,
+//     messages: [
+//       { role: 'system', content: systemPrompt },
+//       ...messages.map(toOpenAIMessage),
+//     ],
+//   })
 
-  const context = airtableData.map(record => {
-    return `Name: ${record.name}\nInfo: ${record.info}`
-  }).join('\n\n')
+//   const encoder = new TextEncoder()
+//  const readableStream = new ReadableStream({
+//   async start(controller) {
+//     let fullContent = ''
+//     for await (const chunk of stream) {
+//       const content = chunk.choices?.[0]?.delta?.content
+//       if (content) {
+//         fullContent += content
+//       }
+//     }
 
-  const systemPrompt = `You are an assistant helping answer questions based on the Airtable data below.
-Use the data to help answer.
-Airtable Records:
-${context}`
+//     if (topDoc?.title) {
+//       fullContent += ` (Source: ${topDoc.title})`
+//     }
 
-  const stream = await openai.chat.completions.create({
-    model: 'gpt-4',
-    stream: true,
-    messages: [
-      { role: 'system', content: systemPrompt },
-      ...messages.map(toOpenAIMessage),
-    ],
-  })
+//     controller.enqueue(encoder.encode(fullContent))
+//     controller.close()
+//   }
+// })
 
-  const encoder = new TextEncoder()
-  const readableStream = new ReadableStream({
-    async start(controller) {
-      for await (const chunk of stream) {
-        const content = chunk.choices?.[0]?.delta?.content
-        if (content) {
-          controller.enqueue(encoder.encode(content))
-        }
-      }
-      controller.close()
-    }
-  })
 
-  return new Response(readableStream)
-}
+//   return new Response(readableStream, {
+//     headers: {
+//       'Content-Type': 'text/plain; charset=utf-8',
+//       'Cache-Control': 'no-cache',
+//     },
+//   })
+// }
 
-async function handleWebScrape(messages: ChatMessage[]) {
-  const lastMessage = messages[messages.length - 1].content
-  const scraped = await scrapeWebsiteContent(lastMessage)
+// async function handleAirtableData(messages: ChatMessage[]) {
+//   const airtableData: AirtableRecord[] = await fetchAirtableData()
 
-  const systemPrompt = `You are a helpful assistant summarizing scraped website content.
-Here is the content you scraped:
-${scraped}`
+//   const context = airtableData.map(record => {
+//     return `Name: ${record.name}\nInfo: ${record.info}`
+//   }).join('\n\n')
 
-  const stream = await openai.chat.completions.create({
-    model: 'gpt-4',
-    stream: true,
-    messages: [
-      { role: 'system', content: systemPrompt },
-      ...messages.map(toOpenAIMessage),
-    ],
-  })
+//   const systemPrompt = `You are an assistant helping answer questions based on the Airtable data below.
+// Use the data to help answer.
+// Airtable Records:
+// ${context}`
 
-  const encoder = new TextEncoder()
-  const readableStream = new ReadableStream({
-    async start(controller) {
-      for await (const chunk of stream) {
-        const content = chunk.choices?.[0]?.delta?.content
-        if (content) {
-          controller.enqueue(encoder.encode(content))
-        }
-      }
-      controller.close()
-    }
-  })
+//   const stream = await openai.chat.completions.create({
+//     model: 'gpt-4',
+//     stream: true,
+//     messages: [
+//       { role: 'system', content: systemPrompt },
+//       ...messages.map(toOpenAIMessage),
+//     ],
+//   })
 
-  return new Response(readableStream)
-}
+//   const encoder = new TextEncoder()
+//   const readableStream = new ReadableStream({
+//     async start(controller) {
+//       for await (const chunk of stream) {
+//         const content = chunk.choices?.[0]?.delta?.content
+//         if (content) {
+//           controller.enqueue(encoder.encode(content))
+//         }
+//       }
+//       controller.close()
+//     }
+//   })
+
+//   return new Response(readableStream)
+// }
+
+// async function handleWebScrape(messages: ChatMessage[]) {
+//   const lastMessage = messages[messages.length - 1].content
+//   const scraped = await scrapeWebsiteContent(lastMessage)
+
+//   const systemPrompt = `You are a helpful assistant summarizing scraped website content.
+// Here is the content you scraped:
+// ${scraped}`
+
+//   const stream = await openai.chat.completions.create({
+//     model: 'gpt-4',
+//     stream: true,
+//     messages: [
+//       { role: 'system', content: systemPrompt },
+//       ...messages.map(toOpenAIMessage),
+//     ],
+//   })
+
+//   const encoder = new TextEncoder()
+//   const readableStream = new ReadableStream({
+//     async start(controller) {
+//       for await (const chunk of stream) {
+//         const content = chunk.choices?.[0]?.delta?.content
+//         if (content) {
+//           controller.enqueue(encoder.encode(content))
+//         }
+//       }
+//       controller.close()
+//     }
+//   })
+
+//   return new Response(readableStream)
+// }
 
 export async function POST(req: NextRequest) {
   const { messages }: { messages: ChatMessage[] } = await req.json()
@@ -260,15 +260,15 @@ export async function POST(req: NextRequest) {
         imageUrl: urls[0],
       })
     }
-    if (scrapeKeywords.some(k => lastMessage.includes(k))) {
-      return await handleWebScrape(messages)
-    }
+    // if (scrapeKeywords.some(k => lastMessage.includes(k))) {
+    //   return await handleWebScrape(messages)
+    // }
 
-    if (airtableKeywords.some(k => lastMessage.includes(k))) {
-      return await handleAirtableData(messages)
-    }
+    // if (airtableKeywords.some(k => lastMessage.includes(k))) {
+    //   return await handleAirtableData(messages)
+    // }
 
-    return await answerCompanyQuestionStream(messages)
+    // return await answerCompanyQuestionStream(messages)
   } catch (err) {
     console.error("Error in POST handler:", err)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })  }
