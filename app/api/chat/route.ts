@@ -58,19 +58,25 @@ Focus on texture, motion, and visual intensity — no layout or type. Just raw, 
 async function generatePoster(prompt: string, type: string = "default", size: string = "1024x1024") {
   const brand = brandMap[type] || { name: "Generic Event", stylePrompt: "" };
 
-  const dallePrompt = `
-Create a bold, full-frame illustrated image for the brand "${brand.name}".
+const dallePrompt = `
+Design a full-bleed, illustrated poster for the brand "${brand.name}".
 Theme: ${prompt}
 
-Visual direction:
-- Apply the following style: ${brand.stylePrompt}
-- Focus on strong composition, texture, and atmosphere.
-- Avoid excessive or detailed text; use minimal or no lettering.
-- Emphasize visual storytelling over layout or typography.
+Visual style:
+- Inspired by: ${brand.stylePrompt}
+- Rich in texture, atmosphere, and color.
+- No detailed text; use minimal or abstract lettering if needed.
 
-This should look like a single, standalone poster design — not a framed mockup, not a collage, not a digital ad.
-Do not show multiple layouts, frames, rooms, or photo-mockups.
+Important:
+- The poster should completely fill the frame, edge to edge.
+- Show only the poster design — not as a mockup, not on a wall, not in a room.
+- No objects, hands, backgrounds, shadows, or surfaces — only the artwork itself.
+- Center the composition. No frames or display settings.
+
+Imagine this is the final image exported from a design program — ready to print or post online.
 `;
+
+
 
  const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
@@ -124,15 +130,8 @@ Do not show multiple layouts, frames, rooms, or photo-mockups.
 //     match_threshold: 0.75,
 //     match_count: 5,
 //   })
-
-<<<<<<< HEAD
 //   const topDoc = data?.[0]
 // const contextText = data?.map((doc: any) => doc.content).join('\n\n') || ''
-=======
-  const topDoc = data?.[0]
-type SupabaseDoc = { content: string; title?: string }
-const contextText = (data as SupabaseDoc[] | undefined)?.map((doc) => doc.content).join('\n\n') || ''
->>>>>>> 22619b2c8e82f1a3ffdd76c7c56b390f2ad900cc
 
 
 //   const systemPrompt = `You are a helpful assistant answering questions using the provided context only.
@@ -249,33 +248,50 @@ const contextText = (data as SupabaseDoc[] | undefined)?.map((doc) => doc.conten
 // }
 
 export async function POST(req: NextRequest) {
-  const { messages }: { messages: ChatMessage[] } = await req.json()
+  const { messages, lastPoster }: { messages: ChatMessage[]; lastPoster?: { prompt: string; imageUrl: string } } = await req.json()
   const lastMessage = messages[messages.length - 1]?.content.toLowerCase() || ''
 
   const posterKeywords = ['poster', 'create a poster', 'generate image', 'image of']
-  const scrapeKeywords = ['scrape', 'get info from', 'fetch from']
-  const airtableKeywords = ['airtable', 'database', 'crm']
+  const editKeywords = ['black and white', 'make it black and white', 'change color', 'add text', 'edit', 'modify', 'update', 'remove text']
 
   try {
-         if (posterKeywords.some(k => lastMessage.includes(k))) {
+    // Check if this is an edit request to an existing poster
+    const isEditRequest = lastPoster && editKeywords.some((kw) => lastMessage.includes(kw))
+
+    if (isEditRequest) {
+      // Compose a new prompt combining the original poster prompt + user's edit instruction
+      const editedPrompt = `${lastPoster.prompt}. Now, ${lastMessage}.`
+
+      const { urls } = await generatePoster(editedPrompt)
+      if (!urls || urls.length === 0) {
+        return NextResponse.json({ error: "Image generation failed" }, { status: 500 })
+      }
+      return NextResponse.json({ imageUrl: urls[0], isEdit: true })
+    }
+
+    // New poster generation request
+    if (posterKeywords.some((k) => lastMessage.includes(k))) {
       const { urls } = await generatePoster(lastMessage)
       if (!urls || urls.length === 0) {
         return NextResponse.json({ error: "Image generation failed" }, { status: 500 })
       }
-      return NextResponse.json({
-        imageUrl: urls[0],
-      })
+      return NextResponse.json({ imageUrl: urls[0], isEdit: false })
     }
+
+    // You can re-enable your other handlers here (scrape, airtable, Q&A) if needed
+    // e.g.:
     // if (scrapeKeywords.some(k => lastMessage.includes(k))) {
     //   return await handleWebScrape(messages)
     // }
-
     // if (airtableKeywords.some(k => lastMessage.includes(k))) {
     //   return await handleAirtableData(messages)
     // }
-
     // return await answerCompanyQuestionStream(messages)
+
+    // Default fallback — for now, just respond with a placeholder or error
+    return NextResponse.json({ error: "No matching handler for the request." }, { status: 400 })
   } catch (err) {
     console.error("Error in POST handler:", err)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })  }
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
 }

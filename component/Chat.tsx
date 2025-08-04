@@ -3,9 +3,14 @@
 import { useState } from 'react'
 
 export default function Chat() {
+  // Chat messages state
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([])
+  // User input state
   const [input, setInput] = useState('')
+  // Loading state for async calls
   const [loading, setLoading] = useState(false)
+  // Track last poster info for edits
+  const [lastPoster, setLastPoster] = useState<{ prompt: string; imageUrl: string } | null>(null)
 
   const sendMessage = async () => {
     if (!input.trim()) return
@@ -18,35 +23,51 @@ export default function Chat() {
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: [...messages, userMessage] }),
+      // Send messages + lastPoster for context
+      body: JSON.stringify({ messages: [...messages, userMessage], lastPoster }),
     })
-    const contentType = response.headers.get('content-type') || '';
+
+    const contentType = response.headers.get('content-type') || ''
     if (contentType.includes('application/json')) {
-        const json = await response.json();
-    if (json.imageUrl) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: `<img src="${json.imageUrl}" alt="Generated Poster" class="max-w-full rounded-lg mt-2" />`,
-        },
-      ]);
-    } else if (json.error) {
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: `❌ Error: ${json.error}` },
-      ]);
+      const json = await response.json()
+
+      if (json.imageUrl) {
+        // Received an image (new or edited poster)
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: `<img src="${json.imageUrl}" alt="Generated Poster" class="max-w-full rounded-lg mt-2" />`,
+          },
+        ])
+
+        // Logic to decide if this is an edit or new poster
+        // Assume backend sets a boolean `json.isEdit` to indicate edit
+        if (json.isEdit) {
+          // Update lastPoster with new prompt + edited image URL
+          setLastPoster({ prompt: userMessage.content, imageUrl: json.imageUrl })
+        } else {
+          // New poster generated - store prompt and URL
+          setLastPoster({ prompt: userMessage.content, imageUrl: json.imageUrl })
+        }
+      } else if (json.error) {
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: `❌ Error: ${json.error}` },
+        ])
+      }
+
+      setLoading(false)
+      return
     }
 
-    setLoading(false);
-    return;
-  }
     if (!response.body) {
       console.error('No response body')
       setLoading(false)
       return
     }
 
+    // Handle streaming text response (e.g., company questions)
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
     let partialContent = ''
@@ -79,6 +100,7 @@ export default function Chat() {
     if (!loading) sendMessage()
   }
 
+  // Turn URLs into clickable links in messages
   function linkify(text: string): string {
     const urlRegex = /(https?:\/\/[^\s]+)/g
     return text.replace(urlRegex, (url) => {
@@ -93,15 +115,17 @@ export default function Chat() {
           <div
             key={i}
             className={`p-3 rounded ${
-             msg.role === 'user'
-  ? 'bg-blue-100 text-right text-gray-900'
-  : 'bg-white text-left text-gray-800 shadow-sm rounded-2xl'
+              msg.role === 'user'
+                ? 'bg-blue-100 text-right text-gray-900'
+                : 'bg-white text-left text-gray-800 shadow-sm rounded-2xl'
             }`}
           >
-           {msg.role === 'assistant' && msg.content.includes('<img')
-  ? <span dangerouslySetInnerHTML={{ __html: msg.content }}></span>
-  : <span dangerouslySetInnerHTML={{ __html: linkify(msg.content) }}></span>
-}
+            {/* Render images as HTML; text messages linkified */}
+            {msg.role === 'assistant' && msg.content.includes('<img') ? (
+              <span dangerouslySetInnerHTML={{ __html: msg.content }}></span>
+            ) : (
+              <span dangerouslySetInnerHTML={{ __html: linkify(msg.content) }}></span>
+            )}
           </div>
         ))}
       </div>
