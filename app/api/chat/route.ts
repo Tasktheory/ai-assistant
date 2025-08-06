@@ -42,7 +42,11 @@ export async function POST(req: NextRequest) {
 
   const contextText = matches?.map(doc => `From ${doc.title}:\n${doc.content}`).join('\n\n') || ''
 
-  const systemPrompt = `You are a helpful company knowledge assistant. Use the following context to answer:\n\n${contextText}`
+  const systemPrompt = `You are a helpful assistant answering questions using internal company documents. Answer **only** from the context below. If the answer is not clearly found, respond with "I don't know."
+
+Context:
+${contextText}
+`
 
   const response = await openai.chat.completions.create({
     model: 'gpt-4',

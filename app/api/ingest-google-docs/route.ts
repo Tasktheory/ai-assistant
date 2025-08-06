@@ -12,22 +12,46 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+// Helper: Parse sections based on capitalized headers and bullet points
+const parseSections = (text: string) => {
+  const lines = text.split('\n').map(line => line.trim()).filter(Boolean)
+
+  const chunks: { title: string; content: string }[] = []
+  let currentTitle = ''
+  let currentContent: string[] = []
+
+  for (const line of lines) {
+    if (/^[A-Z][A-Za-z\s&-]+$/.test(line)) {
+      if (currentTitle && currentContent.length) {
+        chunks.push({ title: currentTitle, content: currentContent.join('\n') })
+        currentContent = []
+      }
+      currentTitle = line
+    } else {
+      currentContent.push(line)
+    }
+  }
+
+  if (currentTitle && currentContent.length) {
+    chunks.push({ title: currentTitle, content: currentContent.join('\n') })
+  }
+
+  return chunks
+}
+
 export async function GET(req: NextRequest) {
   try {
-    // Read and parse Google service account key JSON
     const key = JSON.parse(
       readFileSync(process.env.GOOGLE_SERVICE_ACCOUNT_KEY!, 'utf8')
     )
 
     const auth = new google.auth.GoogleAuth({
-  credentials: key,
-  scopes: ['https://www.googleapis.com/auth/documents.readonly'],
-})
+      credentials: key,
+      scopes: ['https://www.googleapis.com/auth/documents.readonly'],
+    })
 
+    const docs = google.docs({ version: 'v1', auth })
 
-const docs = google.docs({ version: 'v1', auth }) // Pass auth directly
-
-    // Get comma-separated Google Doc IDs from env
     const docIds = process.env.GOOGLE_DOC_IDS!.split(',')
 
     for (const id of docIds) {
@@ -35,54 +59,54 @@ const docs = google.docs({ version: 'v1', auth }) // Pass auth directly
 
       const title = doc.data.title || 'Untitled'
 
-      // Extract text content safely
       const body =
         doc.data.body?.content
-          ?.map((block) =>
-            block.paragraph?.elements
-              ?.map((el) => el.textRun?.content)
-              .join('')
+          ?.map(block =>
+            block.paragraph?.elements?.map(el => el.textRun?.content).join('')
           )
           .join('') || ''
 
-      const content = body.replace(/\n+/g, ' ').trim()
+      const content = body.replace(/\n+/g, '\n').trim()
 
-      // Log extracted data info
       console.log('Ingesting doc:', {
         id,
         title,
         contentLength: content.length,
       })
 
-      // Create OpenAI embedding
-      const embeddingRes = await openai.embeddings.create({
-        model: 'text-embedding-ada-002',
-        input: content,
-      })
+      const sections = parseSections(content)
 
-      const embedding = embeddingRes.data[0].embedding
+      for (let i = 0; i < sections.length; i++) {
+        const section = sections[i]
+        const fullText = `${section.title}\n${section.content}`
 
-      // Log embedding snippet for sanity check
-      console.log('Embedding snippet:', embedding.slice(0, 5))
+        const embeddingRes = await openai.embeddings.create({
+          model: 'text-embedding-ada-002',
+          input: fullText,
+        })
 
-      // Upsert into Supabase
-      const { error } = await supabase.from('documents').upsert({
-        id,
-        title,
-        content,
-        url: `https://docs.google.com/document/d/${id}`,
-        type: 'google-docs',
-        embedding,
-      })
+        const embedding = embeddingRes.data[0].embedding
 
-      if (error) {
-        console.error('Supabase upsert error:', error)
+        const { error } = await supabase.from('documents').upsert({
+          id: `${id}_section_${i}`,
+          title: section.title,
+          content: section.content,
+          url: `https://docs.google.com/document/d/${id}`,
+          type: 'google-docs',
+          embedding,
+        })
+
+        if (error) {
+          console.error('Supabase upsert error:', error)
+        } else {
+          console.log(` Section saved: ${section.title}`)
+        }
       }
     }
 
-    return new Response(' Google Docs ingested successfully!')
+    return new Response('Google Docs ingested successfully')
   } catch (error: any) {
-    console.error(' Error during ingestion:', error)
+    console.error('Error during ingestion:', error)
     return new Response(`Internal Server Error:\n\n${error.message}`, {
       status: 500,
     })

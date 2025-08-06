@@ -104,7 +104,7 @@ export default function AiAssistant() {
           <div
             key={i}
             className={`p-2 rounded ${
-              msg.role === 'user' ? 'bg-blue-200 text-right' : 'bg-gray-200 text-left'
+              msg.role === 'user' ? 'bg-blue-300 text-right' : 'bg-gray-500 text-left'
             }`}
           >
             {msg.type === 'image' && msg.role === 'assistant' ? (
