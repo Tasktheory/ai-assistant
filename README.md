@@ -37,11 +37,11 @@ The Company Knowledge Assistant is a RAG chatbot that:
 
 The Creative Agent helps designers and content creators generate professional event posters by:
 
-**Analyzing event concepts** - Takes a event title and premise as input
-**Generating 3 unique poster designs** - Creates visually distinct concepts using AI image generation
-**Maintaining brand consistency** - Pulls brand colors, typography, and style guidelines from Notion
-**Creating marketing copy** - Generates a 100-word synopsis and punchy promo tagline
-**Ensuring accessibility** - Auto-generates descriptive alt text for all images
+-**Analyzing event concepts** Takes a event title and premise as input
+-**Generating 3 unique poster designs**  Creates visually distinct concepts using AI image generation
+-**Maintaining brand consistency**  Pulls brand colors, typography, and style guidelines from Notion
+-**Creating marketing copy**  Generates a 100-word synopsis and punchy promo tagline
+-**Ensuring accessibility**  Auto-generates descriptive alt text for all images
 
 ### Perfect For:
 - Employee onboarding and training
@@ -61,6 +61,9 @@ The Creative Agent helps designers and content creators generate professional ev
 - 🎨 **Modern UI**: Clean, responsive interface built with Tailwind CSS
 - 🛡️ **Production Ready**: Built for scale with proper error handling
 - 🔧 **Admin Panel**: Easy document ingestion and management
+-**DALL-E 3 Integration**  High-quality poster image generation
+-**Brand-Aware Prompting**  Incorporates your brand guidelines automatically
+-**Multiple Design Concepts**  3 distinct visual approaches per generation
 
 ## 🛠️ Tech Stack
 
@@ -74,9 +77,9 @@ The Creative Agent helps designers and content creators generate professional ev
 - **OpenAI GPT-4** - Language model for responses
 - **OpenAI Embeddings** - Text-to-vector conversion
 - **Supabase** - PostgreSQL with pgvector extension
+- **DALL-E 3** - High-quality image generation
 
 ### Data Sources
-- **Notion API** - Company wiki and documentation
 - **Google Docs API** - Document and policy files
 - **Custom ingestion pipeline** - Automated content processing
 
@@ -91,8 +94,8 @@ The Creative Agent helps designers and content creators generate professional ev
 - Node.js 18+ and npm
 - OpenAI API key
 - Supabase account
-- Notion integration token
 - Google Cloud service account (for Google Docs)
+-Vercel account (for deployment)
 
 ### 1. Clone and Install
 
@@ -110,9 +113,6 @@ Create a `.env.local` file:
 # OpenAI
 OPENAI_API_KEY=your_openai_api_key
 
-# Notion
-NOTION_TOKEN=your_notion_integration_token
-NOTION_DATABASE_ID=your_notion_database_id
 
 # Google Docs
 GOOGLE_DOC_IDS=doc_id_1,doc_id_2,doc_id_3
@@ -181,99 +181,32 @@ npm run dev
 
 Visit `http://localhost:3000` to start chatting!
 
-### 5. Admin Panel
+### 5. Ingestion
 
-1. Go to `http://localhost:3000/admin`
-2. Click "Ingest All Sources" to process your documents
-3. Wait for ingestion to complete
-4. Start asking questions!
+1. Go to `http://localhost:3000/api/google-docs-ingest`
+2. Wait for ingestion to complete. You will see "Google Docs ingested successfully"
+3. Start asking questions!
+**Note**: The link depends on where the ingestion.ts is located in the folder. 
 
-## 🎯 Project Goals & Scope (For Interns)
-
-This project is designed to give you hands-on experience with modern full-stack development, AI integration, and collaborative software engineering practices.
-
-### Team Structure
-You are part of a 3-person team. Each team is responsible for a distinct full-stack application. Collaboration within your team is key!
-
-### Core Deliverables (MVP)
-Your primary goal is to deliver a functional version with these core features:
-
-- ✅ **Chat Interface**: Responsive UI for questions and AI-generated answers
-- ✅ **Real-time Streaming**: Streaming responses for smooth chat experience
-- ✅ **Semantic Search**: Retrieve relevant information using vector embeddings
-- ✅ **Source Citations**: Display clickable links to original documents
-- ✅ **Error Handling**: User-friendly error messages for API failures
-
-### Stretch Goals
-If your team completes the MVP ahead of schedule:
-
-- [ ] User authentication for the chat interface
-- [ ] Enhanced Admin Panel with ingestion logs
-- [ ] Additional data sources (GitHub, Confluence)
-- [ ] Chat history and suggested questions
-- [ ] Query performance optimization
-
-## 🔄 Development Workflow & Guidelines
-
-### Git Workflow
-- **Feature Branches**: Create branches for each feature (`feature/add-chat-history`)
-- **Small Commits**: Make frequent, atomic commits with clear messages
-- **Pull Requests**: All changes must go through PRs to main branch
-- **Stay Updated**: Always `git pull` from main before starting new work
 
 ### Branch Protection Rules
 - ❌ No direct pushes to main
-- ✅ Required approving reviews from team members
-- ✅ All status checks must pass before merging
-
-### Code Review Process
-- **Constructive Feedback**: Focus on code quality and readability
-- **Prompt Reviews**: Review teammates' PRs quickly
-- **Learning Opportunity**: Be open to feedback and ask questions
-
-### Communication
-- **Daily Stand-ups**: Discuss progress, blockers, and plans
-- **Team Channels**: Use designated DEVSA Discord for quick questions
-- **GitHub Issues**: Track bugs, features, and tasks
 
 ## 🏗️ Architecture Overview
 
 ```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Data Sources  │    │   Ingestion      │    │  Vector Store   │
-│                 │    │                  │    │                 │
-│ • Notion Pages  │───▶│ • Text Extraction│───▶│ • Supabase      │
-│ • Google Docs   │    │ • Chunking       │    │ • Embeddings    │
-│ • Future: PDFs  │    │ • Embedding      │    │ • Similarity    │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-                                                         │
-┌─────────────────┐    ┌──────────────────┐              │
-│   Chat UI       │    │   API Routes     │              │
-│                 │    │                  │              │
-│ • Real-time     │◀───│ • Vector Search  │◀─────────────┘
-│ • Citations     │    │ • AI Generation  │
-│ • Streaming     │    │ • Source Linking │
-└─────────────────┘    └──────────────────┘
+to come
 ```
 
 ## 🔧 Configuration
 
 ### Example Questions
 Try asking:
-- "What's our brand color palette?"
+- "Whatis the Vemos Vamos brand style?"
 - "How do I submit a vacation request?"
-- "What are our design principles?"
-- "Who do I contact for IT support?"
+- "What are our company values?"
+- "Who is the CEO?"
 
-### Customizing Responses
-Modify the system prompt in `app/api/chat/route.ts`:
-
-```typescript
-const systemPrompt = `You are a helpful company knowledge assistant...
-- Add your custom instructions here
-- Modify tone and style
-- Add specific formatting requirements`
-```
 
 ## 🚀 Deployment
 
@@ -286,22 +219,16 @@ const systemPrompt = `You are a helpful company knowledge assistant...
 ### Environment Variables in Production
 Set all variables in your Vercel project settings:
 - `OPENAI_API_KEY`
-- `NOTION_TOKEN`
-- `NOTION_DATABASE_ID`
 - `GOOGLE_DOC_IDS`
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
-## 🆘 Mentorship & Support
-
-Don't hesitate to ask questions, seek clarification, or request help if you get stuck.
-
-## 👥 Team
+## Creators
 
 - **Kamian** - Developer
 - **Samuel** - Developer  
-- **Guna** - Developer
+- **Esther** - Developer
 
 ---
 
