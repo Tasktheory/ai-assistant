@@ -3,6 +3,7 @@ import OpenAI from 'openai'
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest } from 'next/server'
 
+
 export const runtime = 'edge'
 
 // Define the interface for your documents
@@ -48,8 +49,8 @@ export async function POST(req: NextRequest) {
 
 Use **only** the information in the context below. If the answer is not found, respond with "I don't know."
 
-**Always include the source title(s) at the end of your answer using this format:**
-Source: [Document Title](URL)
+Only include the source title(s) at the end of your answer if the context was used. Use this format:
+Source: [Document Title](URL)  
 
 Make the link clickable
 Context:

@@ -19,6 +19,15 @@
   }
 }
 
+/* Style all <a> tags inside assistant responses */
+.chat-response a {
+  color: #2563eb; /* Tailwind blue-600 */
+  text-decoration: underline;
+}
+.chat-response a:hover {
+  color: #1d4ed8; /* Tailwind blue-700 */
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

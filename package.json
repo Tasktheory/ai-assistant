@@ -11,7 +11,9 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.52.1",
     "ai": "^4.3.19",
+    "dompurify": "^3.2.6",
     "googleapis": "^154.0.0",
+    "marked": "^16.1.2",
     "next": "^15.4.2-canary.29",
     "openai": "^5.10.2",
     "react": "19.1.0",

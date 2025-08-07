@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import PromptingTips from '../component/index'
+import MarkdownMessage from '../component/helper'
 
 export default function AiAssistant() {
   const [messages, setMessages] = useState<{ role: string; content: string; type?: 'chat' | 'image' }[]>([])
@@ -100,20 +101,21 @@ export default function AiAssistant() {
       {/* Messages */}
       
 
-        {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={`p-2 rounded ${
-              msg.role === 'user' ? 'bg-blue-300 text-right' : 'bg-gray-500 text-left'
-            }`}
-          >
-            {msg.type === 'image' && msg.role === 'assistant' ? (
-              <img src={msg.content} alt="Generated" className="rounded max-w-xs" />
-            ) : (
-              msg.content
-            )}
-          </div>
-        ))}
+       {messages.map((msg, i) => (
+  <div
+    key={i}
+    className={`p-2 rounded ${
+      msg.role === 'user' ? 'bg-blue-300 text-right' : 'bg-gray-500 text-left'
+    }`}
+  >
+    {msg.type === 'image' && msg.role === 'assistant' ? (
+      <img src={msg.content} alt="Generated" className="rounded max-w-xs" />
+    ) : (
+      <MarkdownMessage content={msg.content} />
+    )}
+  </div>
+))}
+          
       </div>
 
       {/* Input */}
