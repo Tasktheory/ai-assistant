@@ -1,6 +1,6 @@
 # AI Assistant 🤖
 
-A powerful AI-powered chatbot that provides instant answers to questions about your company's documentation, style guides, project briefs, and FAQs. Built with Next.js, the Vercel AI SDK, and OpenAI.
+A powerful AI-powered chatbot that provides instant answers to questions about your company's documentation, style guides, project briefs, and FAQs as well as transforming event concepts into professional poster designs with brand-consistent marketing copy. Built with Next.js, the Vercel AI SDK, and OpenAI.
 
 ## Table of Contents
 
@@ -19,9 +19,11 @@ A powerful AI-powered chatbot that provides instant answers to questions about y
 
 ## Overview
 
-The Company Knowledge Assistant is a Retrieval-Augmented Generation (RAG) chatbot designed to centralize and provide quick, accurate answers to questions about your company's internal documentation. It leverages advanced AI models and vector search to understand natural language queries and retrieve relevant information from various sources, presenting it with direct citations.
+The AI Assitant is an AI-powered chatbot designed to serve as your company’s intelligent assistant. It combines advanced Retrieval-Augmented Generation (RAG) capabilities to answer detailed questions about internal company documentation with creative AI features that generate visually appealing, brand-consistent marketing materials and SEO-optimized copy from high-level event concepts.
 
-This project aims to enhance efficiency in employee onboarding, policy lookups, project documentation, and technical support by providing an intelligent, real-time knowledge assistant.
+Whether you need quick, accurate answers about company policies, projects, or onboarding — or want to transform event ideas into professional marketing assets — ASKME seamlessly supports both knowledge management and creative workflows in a single, unified platform.
+
+This project offers practical experience with AI models, vector search, and full-stack web development to build a versatile tool that boosts productivity and creativity company-wide.
 
 ## What This Application Does
 
@@ -33,6 +35,14 @@ The Company Knowledge Assistant is a RAG chatbot that:
 - **Cites sources** with direct links to the original documents
 - **Streams responses** in real-time for a smooth chat experience
 
+The Creative Agent helps designers and content creators generate professional event posters by:
+
+**Analyzing event concepts** - Takes a event title and premise as input
+**Generating 3 unique poster designs** - Creates visually distinct concepts using AI image generation
+**Maintaining brand consistency** - Pulls brand colors, typography, and style guidelines from Notion
+**Creating marketing copy** - Generates a 100-word synopsis and punchy promo tagline
+**Ensuring accessibility** - Auto-generates descriptive alt text for all images
+
 ### Perfect For:
 - Employee onboarding and training
 - Quick access to company policies and procedures
@@ -40,6 +50,7 @@ The Company Knowledge Assistant is a RAG chatbot that:
 - Project documentation lookup
 - HR policy questions
 - Technical documentation search
+- Generating event posters
 
 ## ✨ Key Features
 

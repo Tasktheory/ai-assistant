@@ -40,13 +40,22 @@ export async function POST(req: NextRequest) {
   // Cast 'data' as Document[] so TypeScript knows the shape
   const matches = data as Document[] | undefined
 
-  const contextText = matches?.map(doc => `From ${doc.title}:\n${doc.content}`).join('\n\n') || ''
+ const contextText = matches?.map(doc =>
+  `${doc.content}\n\n**Source:** [${doc.title}](${doc.url})`
+).join('\n\n') || ''
 
-  const systemPrompt = `You are a helpful assistant answering questions using internal company documents. Answer **only** from the context below. If the answer is not clearly found, respond with "I don't know."
+  const systemPrompt = `You are a helpful assistant answering questions using internal company documents. 
 
+Use **only** the information in the context below. If the answer is not found, respond with "I don't know."
+
+**Always include the source title(s) at the end of your answer using this format:**
+Source: [Document Title](URL)
+
+Make the link clickable
 Context:
 ${contextText}
 `
+
 
   const response = await openai.chat.completions.create({
     model: 'gpt-4',

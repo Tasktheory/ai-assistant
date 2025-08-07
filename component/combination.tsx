@@ -122,7 +122,7 @@ export default function AiAssistant() {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder='Type a 434 company question or create an event poster'
+          placeholder='Type a 434 company question or "image: prompt"'
           className="flex-1 border p-2 rounded text-black"
           disabled={loading}
         />
