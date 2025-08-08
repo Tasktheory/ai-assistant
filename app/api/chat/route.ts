@@ -24,6 +24,8 @@ const supabase = createClient(
 )
 
 export async function POST(req: NextRequest) {
+    console.log("Using API Key:", process.env.OPENAI_API_KEY?.slice(0, 10) + "...");
+
   const { messages } = await req.json()
   const question = messages[messages.length - 1].content
 

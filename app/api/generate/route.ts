@@ -1,131 +1,172 @@
-//app\api\generate\route.ts
+// app/api/generate/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import OpenAI from "openai";
+import { createClient } from "@supabase/supabase-js";
+
+export const runtime = "edge";
+
+interface Document {
+  id: string;
+  content: string;
+  title: string;
+  url: string;
+  type: string;
+  similarity: number;
+}
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_ANON_KEY!
+);
+
+// Helper to extract brand styles from document content given brand name
+function extractBrandStyles(docContent: string, brandName: string) {
+  const brandRegex = new RegExp(
+    `## Brand:\\s*${brandName}[\\s\\S]*?(?=(## Brand:|$))`,
+    "i"
+  );
+  const match = docContent.match(brandRegex);
+  if (!match) return null;
+
+  const section = match[0];
+
+  // Extract Overview (optional)
+  const overviewMatch = section.match(/Overview:\s*([\s\S]*?)(?=\n[A-Z]|$)/i);
+  const overview = overviewMatch ? overviewMatch[1].trim() : "";
+
+  // Extract Colors
+  const colorsMatch = section.match(/Colors:\s*(.+)/i);
+  const colors = colorsMatch ? colorsMatch[1].trim() : "";
+
+  // Extract Notes (as array)
+  const notesMatches = [...section.matchAll(/- (.+)/g)].map((m) => m[1]);
+
+  return {
+    overview,
+    colors,
+    notes: notesMatches,
+  };
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const { prompt, type = "default", size = "1024x1024" } = await req.json();
+    const { prompt, size = "1024x1024" } = await req.json();
 
-    const brandMap: Record<string, { name: string; stylePrompt: string }> = {
-      vemosvamos: {
-        name: "Vemos Vamos",
-        stylePrompt: `
-Design a single-page poster with a clean, scrapbook-inspired look.
-
-Use one central, realistic image that reflects the event theme. Keep the layout simple and minimal, like a student flyer.
-
-Stick to a cream background (#ECEADA) with dark red (#861804) and black accents. Add subtle paper textures, cutout edges, or tape to create a handmade, analog feel.
-
-Avoid multiple layouts, ornate patterns, decorative flourishes, or mockup-style borders. The final image should feel like a real flyer, photographed or scanned.
-`,
-
-      },
-      devsa: {
-        name: "DEVSA",
-        stylePrompt: `
-Use a modern, tech-inspired photo.
-
-Design should be influenced by command-line terminals and code editor UIs. Incorporate visual elements such as:
-- monospaced fonts
-- dark backgrounds with neon green (#00FF00), electric blue (#00BFFF)
-- brackets, code snippets, or syntax-like separators
-
-Avoid serif fonts, analog textures, or retro imagery. The design should feel sleek, digital, and clearly themed around coding or developer culture.
-        `,
-      },
-      texmex: {
-        name: "TexMex Heritage",
-        stylePrompt: `
-Create a single black-and-white illustration with a gritty, high-contrast look. Inspired by vintage boxing aesthetics, but with no text.
-
-Focus on texture, motion, and visual intensity — no layout or type. Just raw, rugged visual storytelling in bold style.
-        `,
-      },
-    };
-
-    const brand = brandMap[type] || {
-      name: "Generic Event",
-      stylePrompt: "",
-    };
-
-    const dallePrompt = `
-Create a bold, full-frame illustrated image for the brand "${brand.name}".
-Theme: ${prompt}
-
-Visual direction:
-- Apply the following style: ${brand.stylePrompt}
-- Focus on strong composition, texture, and atmosphere.
-- Avoid excessive or detailed text; use minimal or no lettering.
-- Emphasize visual storytelling over layout or typography.
-
-This should look like a single, standalone poster design — not a framed mockup, not a collage, not a digital ad.
-Do not show multiple layouts, frames, rooms, or photo-mockups.
-`;
-
-    const gptPrompt = `
-You are a creative copywriter for posters and event flyers.
-
-Given the brand "${brand.name}" and the event theme: "${prompt}", write a short, catchy caption that would go below or alongside the poster.
-
-Guidelines:
-- Max 25 words
-- Match tone of the brand
-- Be clear and engaging
-`;
-
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: "Missing API Key" }, { status: 500 });
+    if (!prompt || typeof prompt !== "string") {
+      return NextResponse.json({ error: "Missing or invalid prompt" }, { status: 400 });
     }
 
-    // === DALL·E Image Generation ===
-    const imageRes = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "dall-e-3",
-        prompt: dallePrompt,
-        n: 1,
-        size,
-        response_format: "url",
-      }),
+    // 1. Embed prompt and fetch matching docs
+    const embedding = await openai.embeddings.create({
+      model: "text-embedding-ada-002",
+      input: prompt,
     });
 
-    const imageData = await imageRes.json();
-    if (imageData.error) {
-      console.error("OpenAI image error:", imageData.error);
-      return NextResponse.json({ error: imageData.error.message }, { status: 500 });
+    const { data } = await supabase.rpc("match_documents", {
+      query_embedding: embedding.data[0].embedding,
+      match_threshold: 0.7,
+      match_count: 1,
+    });
+
+    if (!data || data.length === 0) {
+      // No matches: fallback generic style prompt
+      const genericPrompt = `
+Create a clean, modern poster with neutral colors (gray, white, blue).
+Focus on strong composition and visual storytelling.
+Avoid brand-specific elements or colors.
+Theme or subject: ${prompt}
+      `;
+      return await generateImage(genericPrompt, size);
     }
 
-    const urls = imageData.data?.map((img: { url: string }) => img.url);
+    // 2. Extract brand name from prompt (simple heuristic: first word or known brand words)
+    // For demo, try extracting a single brand word that matches any brand title in the doc
+    const docContent = data[0].content;
 
-    // === GPT Caption Generation ===
-    const captionRes = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4",
-        messages: [
-          { role: "system", content: "You write captions for event posters make it initing and fun!." },
-          { role: "user", content: gptPrompt },
-        ],
-        temperature: 0.7,
-      }),
-    });
+    // Find all brand names in the doc to match prompt words
+    const brandNames = [...docContent.matchAll(/## Brand:\s*(\w+)/gi)].map(m => m[1].toLowerCase());
+    const promptWords = prompt.toLowerCase().split(/\W+/);
 
-    const captionData = await captionRes.json();
-    const caption = captionData.choices?.[0]?.message?.content?.trim() || "";
+    const detectedBrand = brandNames.find(b => promptWords.includes(b));
 
-    return NextResponse.json({ urls, caption });
+    // 3. Extract style info if brand found, else fallback
+    let stylePrompt: string;
+    let brandOverview = "";
+
+    if (detectedBrand) {
+      const styles = extractBrandStyles(docContent, detectedBrand);
+      brandOverview = styles?.overview || "";
+      stylePrompt = `
+Use these style details:
+- Colors: ${styles?.colors || "N/A"}.
+- Notes: ${styles?.notes?.join("; ") || "No specific notes."}.
+`;
+    } else {
+      stylePrompt = `
+Create a clean, modern poster with neutral colors (gray, white, blue).
+Focus on strong composition and visual storytelling.
+Avoid brand-specific elements or colors.
+`;
+    }
+
+    // 4. Construct final prompt for DALL·E
+const dallePrompt = `
+Create a bold, full-frame illustrated image.
+
+${brandOverview ? `Brand overview: ${brandOverview}\n` : ""}
+
+Visual style:
+${stylePrompt}
+
+Focus on strong composition, texture, and atmosphere.
+Avoid excessive or detailed text; use minimal or no lettering.
+Emphasize visual storytelling over layout or typography.
+
+Image request details:
+${prompt}
+
+This should look like a single, standalone image — not a framed mockup, collage, or digital ad.
+`;
+
+    // 5. Generate image
+    return await generateImage(dallePrompt, size);
 
   } catch (err: unknown) {
     console.error("Unhandled error:", err);
     const message = err instanceof Error ? err.message : "Server error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
+}
+
+// Helper function to call DALL·E API and return the image URLs
+async function generateImage(prompt: string, size: string) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json({ error: "Missing API Key" }, { status: 500 });
+  }
+
+  const imageRes = await fetch("https://api.openai.com/v1/images/generations", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "dall-e-3",
+      prompt,
+      n: 1,
+      size,
+      response_format: "url",
+    }),
+  });
+
+  const imageData = await imageRes.json();
+  if (imageData.error) {
+    console.error("OpenAI image error:", imageData.error);
+    return NextResponse.json({ error: imageData.error.message }, { status: 500 });
+  }
+
+  const urls = imageData.data?.map((img: { url: string }) => img.url);
+  return NextResponse.json({ urls });
 }

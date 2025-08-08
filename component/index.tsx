@@ -1,5 +1,5 @@
 //ai-assistant\component\index.tsx
-
+'use client'
 import { useState } from 'react'
 
 export default function PromptingTips() {
