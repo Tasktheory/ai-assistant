@@ -16,22 +16,38 @@ interface Document {
   similarity: number
 }
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
+let _openai: OpenAI | null = null
+function getOpenAI(): OpenAI {
+  if (_openai) return _openai
+  const key = process.env.OPENAI_API_KEY
+  if (!key) {
+    throw new Error('OPENAI_API_KEY not set')
+  }
+  _openai = new OpenAI({ apiKey: key })
+  return _openai
+}
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_ANON_KEY!
-)
+let _supabase: ReturnType<typeof createClient> | null = null
+function getSupabase() {
+  if (_supabase) return _supabase
+  const url = process.env.SUPABASE_URL
+  const key = process.env.SUPABASE_ANON_KEY
+  if (!url || !key) throw new Error('Supabase env vars not set')
+  _supabase = createClient(url, key)
+  return _supabase
+}
 
 export async function POST(req: NextRequest) {
   const { messages } = await req.json()
   const question = messages[messages.length - 1].content
 
+  const openai = getOpenAI()
   const embedding = await openai.embeddings.create({
     model: 'text-embedding-ada-002',
     input: question,
   })
 
+  const supabase = getSupabase()
   const { data } = await supabase.rpc('match_documents', {
     query_embedding: embedding.data[0].embedding,
     match_threshold: 0.75,

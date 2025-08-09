@@ -6,7 +6,6 @@ import { useState, useEffect } from "react";
 
 export default function Home() {
   const [prompt, setPrompt] = useState("");
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [image, setImage] = useState<string | null>(null);
@@ -23,18 +22,25 @@ export default function Home() {
   const [posterType, setPosterType] = useState(brandKeys[0]);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: NodeJS.Timeout | undefined;
+    let timeout: NodeJS.Timeout | undefined;
     if (isLoading) {
       setProgress(0);
       interval = setInterval(() => {
         setProgress((prev) => (prev >= 95 ? prev : prev + Math.floor(Math.random() * 5) + 1));
       }, 200);
-    } else if (!isLoading && progress !== 0) {
-      setProgress(100);
-      const timeout = setTimeout(() => setProgress(0), 800);
-      return () => clearTimeout(timeout);
+    } else {
+      // complete the bar if it was in progress, then reset after a short delay
+      setProgress((prev) => {
+        if (prev === 0) return 0;
+        timeout = setTimeout(() => setProgress(0), 800);
+        return 100;
+      });
     }
-    return () => clearInterval(interval);
+    return () => {
+      if (interval) clearInterval(interval);
+      if (timeout) clearTimeout(timeout);
+    };
   }, [isLoading]);
 
   const [caption, setCaption] = useState("");
@@ -101,7 +107,7 @@ export default function Home() {
         <ul className="list-disc list-inside space-y-1 text-white/80">
           <li>Describe the <b>event or scene</b>, not layout</li>
           <li>Focus on the <b>vibe, subject, or action</b></li>
-          <li><b>Don't</b> say “poster” it knows it's a poster</li>
+          <li><b>Don&apos;t</b> say “poster” it knows it&apos;s a poster</li>
         </ul>
       </div>
 

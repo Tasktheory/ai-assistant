@@ -2,15 +2,28 @@
 import { google } from 'googleapis'
 import OpenAI from 'openai'
 import { createClient } from '@supabase/supabase-js'
-import { NextRequest } from 'next/server'
 import { readFileSync } from 'fs'
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
+let _openai: OpenAI | null = null
+function getOpenAI(): OpenAI {
+  if (_openai) return _openai
+  const key = process.env.OPENAI_API_KEY
+  if (!key) {
+    throw new Error('OPENAI_API_KEY not set')
+  }
+  _openai = new OpenAI({ apiKey: key })
+  return _openai
+}
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+let _supabase: ReturnType<typeof createClient> | null = null
+function getSupabase() {
+  if (_supabase) return _supabase
+  const url = process.env.SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) throw new Error('Supabase service env vars not set')
+  _supabase = createClient(url, key)
+  return _supabase
+}
 
 // Helper: Parse sections based on capitalized headers and bullet points
 const parseSections = (text: string) => {
@@ -39,7 +52,7 @@ const parseSections = (text: string) => {
   return chunks
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const key = JSON.parse(
       readFileSync(process.env.GOOGLE_SERVICE_ACCOUNT_KEY!, 'utf8')
@@ -80,14 +93,16 @@ export async function GET(req: NextRequest) {
         const section = sections[i]
         const fullText = `${section.title}\n${section.content}`
 
-        const embeddingRes = await openai.embeddings.create({
+  const openai = getOpenAI()
+  const embeddingRes = await openai.embeddings.create({
           model: 'text-embedding-ada-002',
           input: fullText,
         })
 
         const embedding = embeddingRes.data[0].embedding
 
-        const { error } = await supabase.from('documents').upsert({
+  const supabase = getSupabase()
+  const { error } = await supabase.from('documents').upsert({
           id: `${id}_section_${i}`,
           title: section.title,
           content: section.content,
@@ -105,9 +120,10 @@ export async function GET(req: NextRequest) {
     }
 
     return new Response('Google Docs ingested successfully')
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error during ingestion:', error)
-    return new Response(`Internal Server Error:\n\n${error.message}`, {
+    const message = error instanceof Error ? error.message : String(error)
+    return new Response(`Internal Server Error:\n\n${message}`, {
       status: 500,
     })
   }
